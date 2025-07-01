@@ -166,19 +166,64 @@ Usa un tono cercano y alentador.`;
         }
     };
     
-    const handleSendEmail = (e) => {
-        e.preventDefault(); if (!result || !email) return;
-        const subject = `Resultados del Cálculo de Riesgo Cardiovascular para ${result.nombre || 'el paciente'}`;
-        let body = `Estimado(a) ${result.nombre || ''},\n\nA continuación, se presentan los resultados de su cálculo de riesgo cardiovascular, basado en el score de Framingham adaptado para Chile.\n\n--------------------------------\n  • RIESGO A 10 AÑOS: ${result.risk}%\n  • CLASIFICACIÓN: ${result.classification.level}\n  • PUNTOS DE RIESGO: ${result.points}\n--------------------------------\n\nRECOMENDACIONES GENERALES:\n\n`;
-        const plainTextRecommendations = result.recommendations.map(rec => '• ' + rec.replace(/<strong>/g, '').replace(/<\/strong>/g, '')).join('\n');
-        body += plainTextRecommendations;
-        if(geminiPlan) {
-            body += `\n\n--------------------------------\nPLAN DE ACCIÓN PERSONALIZADO (GENERADO CON IA):\n--------------------------------\n\n${geminiPlan}`;
-        }
-        body += `\n\nAtentamente,\nSu Herramienta de Salud Cardiovascular.\n\nDescargo de responsabilidad: Esta es una herramienta educativa y no reemplaza el consejo, diagnóstico o tratamiento de un profesional médico.`;
-        const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoLink;
-    };
+const handleSendEmail = async (e) => {
+    e.preventDefault();
+    if (!result || !email) return;
+
+    // Muestra una alerta al usuario para que sepa que se está enviando
+    alert('Enviando reporte, por favor espera...');
+
+    // Prepara el cuerpo del correo en formato HTML
+    const subject = `Resultados del Cálculo de Riesgo Cardiovascular para ${result.nombre || 'el paciente'}`;
+    let body = `
+      <h1>Resultados para ${result.nombre || ''}</h1>
+      <p>A continuación, se presentan los resultados de su cálculo de riesgo cardiovascular.</p>
+      <hr>
+      <ul>
+        <li><strong>RIESGO A 10 AÑOS:</strong> ${result.risk}%</li>
+        <li><strong>CLASIFICACIÓN:</strong> ${result.classification.level}</li>
+        <li><strong>PUNTOS DE RIESGO:</strong> ${result.points}</li>
+      </ul>
+      <hr>
+      <h3>Recomendaciones Generales:</h3>
+      <ul>
+        ${result.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+      </ul>
+    `;
+    if (geminiPlan) {
+        body += `<hr><h3>Plan de Acción Personalizado (IA):</h3><p>${geminiPlan.replace(/\n/g, '<br>')}</p>`;
+    }
+    body += `<br><p><small>Descargo de responsabilidad: Esta es una herramienta educativa y no reemplaza el consejo médico.</small></p>`;
+
+    try {
+      // Llama a la función sin servidor que creamos en Vercel
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: email,
+          subject: subject,
+          body: body,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('¡Resultados enviados exitosamente!');
+      } else {
+        // Si hay un error, lo muestra
+        throw new Error(data.error || 'Algo salió mal en el servidor.');
+      }
+    } catch (error) {
+      console.error('Error al enviar el correo:', error);
+      alert(`Error al enviar el correo: ${error.message}`);
+    }
+};
+
+    
 
     return (
         <div className="min-h-screen bg-slate-100 font-sans p-4 sm:p-6 md:p-8">
