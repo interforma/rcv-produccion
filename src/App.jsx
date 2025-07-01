@@ -170,33 +170,15 @@ const handleSendEmail = async (e) => {
     e.preventDefault();
     if (!result || !email) return;
 
-    // Muestra una alerta al usuario para que sepa que se está enviando
     alert('Enviando reporte, por favor espera...');
 
-    // Prepara el cuerpo del correo en formato HTML
     const subject = `Resultados del Cálculo de Riesgo Cardiovascular para ${result.nombre || 'el paciente'}`;
-    let body = `
-      <h1>Resultados para ${result.nombre || ''}</h1>
-      <p>A continuación, se presentan los resultados de su cálculo de riesgo cardiovascular.</p>
-      <hr>
-      <ul>
-        <li><strong>RIESGO A 10 AÑOS:</strong> ${result.risk}%</li>
-        <li><strong>CLASIFICACIÓN:</strong> ${result.classification.level}</li>
-        <li><strong>PUNTOS DE RIESGO:</strong> ${result.points}</li>
-      </ul>
-      <hr>
-      <h3>Recomendaciones Generales:</h3>
-      <ul>
-        ${result.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-      </ul>
-    `;
-    if (geminiPlan) {
-        body += `<hr><h3>Plan de Acción Personalizado (IA):</h3><p>${geminiPlan.replace(/\n/g, '<br>')}</p>`;
-    }
-    body += `<br><p><small>Descargo de responsabilidad: Esta es una herramienta educativa y no reemplaza el consejo médico.</small></p>`;
+
+    // Prepara los datos que enviaremos al servidor
+    const resultData = { ...result, geminiPlan };
 
     try {
-      // Llama a la función sin servidor que creamos en Vercel
+      // Llama a la función del servidor, ahora enviando el objeto de datos completo
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
@@ -205,7 +187,7 @@ const handleSendEmail = async (e) => {
         body: JSON.stringify({
           to: email,
           subject: subject,
-          body: body,
+          resultData: resultData, // Envía el objeto de datos
         }),
       });
 
@@ -214,7 +196,6 @@ const handleSendEmail = async (e) => {
       if (response.ok) {
         alert('¡Resultados enviados exitosamente!');
       } else {
-        // Si hay un error, lo muestra
         throw new Error(data.error || 'Algo salió mal en el servidor.');
       }
     } catch (error) {
