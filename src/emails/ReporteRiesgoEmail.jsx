@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
 // ¡RUTA CORREGIDA!
-import { ReporteRiesgoEmail } from '../emails/ReporteRiesgoEmail';
+import { ReporteRiesgoEmail } from './ReporteRiesgoEmail';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 

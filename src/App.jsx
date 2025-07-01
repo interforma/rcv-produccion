@@ -1,3 +1,5 @@
+import { render } from '@react-email/render';
+import { ReporteRiesgoEmail } from './emails/ReporteRiesgoEmail';
 import React, { useState } from 'react';
 
 // --- Icon Components ---
@@ -170,15 +172,18 @@ const handleSendEmail = async (e) => {
     e.preventDefault();
     if (!result || !email) return;
 
-    alert('Enviando reporte, por favor espera...');
+    alert('Preparando y enviando reporte, por favor espera...');
 
     const subject = `Resultados del Cálculo de Riesgo Cardiovascular para ${result.nombre || 'el paciente'}`;
 
-    // Prepara los datos que enviaremos al servidor
+    // Prepara los datos que necesita la plantilla
     const resultData = { ...result, geminiPlan };
 
+    // ¡NUEVO! Renderiza el componente de React a una cadena de HTML en el frontend
+    const emailHtml = render(<ReporteRiesgoEmail {...resultData} />);
+
     try {
-      // Llama a la función del servidor, ahora enviando el objeto de datos completo
+      // Llama a la función del servidor, ahora enviando el HTML ya listo
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
@@ -187,7 +192,7 @@ const handleSendEmail = async (e) => {
         body: JSON.stringify({
           to: email,
           subject: subject,
-          resultData: resultData, // Envía el objeto de datos
+          html: emailHtml, // Envía el HTML renderizado
         }),
       });
 

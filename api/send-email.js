@@ -1,7 +1,4 @@
 import { Resend } from 'resend';
-import { render } from '@react-email/render';
-// ¡RUTA CORREGIDA! Ahora busca la plantilla en la misma carpeta api.
-import { ReporteRiesgoEmail } from './emails/ReporteRiesgoEmail';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -10,15 +7,14 @@ export default async (req, res) => {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
   try {
-    const { to, subject, resultData } = req.body;
-
-    const emailHtml = render(<ReporteRiesgoEmail {...resultData} />);
+    // Recibe el HTML ya renderizado desde el frontend
+    const { to, subject, html } = req.body;
 
     const { data, error } = await resend.emails.send({
       from: 'Calculadora RCV <onboarding@resend.dev>',
       to: [to],
       subject: subject,
-      html: emailHtml,
+      html: html, // Pasa el HTML directamente a Resend
     });
 
     if (error) {
