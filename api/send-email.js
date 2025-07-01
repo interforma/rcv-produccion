@@ -3,13 +3,10 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Función para construir el HTML del correo
 function buildEmailHtml(resultData) {
   const { nombre, risk, classification, points, recommendations, geminiPlan } = resultData;
-
   const recommendationsHtml = recommendations.map(rec => `<li>${rec}</li>`).join('');
   const geminiPlanHtml = geminiPlan ? `<hr><h3>✨ Plan de Acción con IA</h3><p>${geminiPlan.replace(/\n/g, '<br>')}</p>` : '';
-
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.6;">
       <h1 style="color: #333;">Reporte de Salud Cardiovascular</h1>
@@ -41,8 +38,6 @@ export default async (req, res) => {
   }
   try {
     const { to, subject, resultData } = req.body;
-
-    // Construye el HTML aquí mismo en el servidor
     const emailHtml = buildEmailHtml(resultData);
 
     const { data, error } = await resend.emails.send({
@@ -52,14 +47,17 @@ export default async (req, res) => {
       html: emailHtml,
     });
 
+    // ¡MANEJO DE ERRORES MEJORADO!
     if (error) {
-      console.error({ error });
-      return res.status(400).json(error);
+      // Imprime el error completo en los logs de Vercel para que podamos verlo.
+      console.error("Error desde la API de Resend:", error);
+      // Devuelve un error claro al frontend.
+      return res.status(400).json({ message: "Error al enviar desde Resend", details: error });
     }
 
     return res.status(200).json({ message: 'Correo enviado!' });
   } catch (error) {
-    console.error({ error });
-    return res.status(500).json({ error: 'Error Interno' });
+    console.error("Error en la función del servidor:", error);
+    return res.status(500).json({ message: 'Error Interno del Servidor', details: error.message });
   }
 };
