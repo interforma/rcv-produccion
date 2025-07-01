@@ -1,20 +1,55 @@
+// En api/send-email.js
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Función para construir el HTML del correo
+function buildEmailHtml(resultData) {
+  const { nombre, risk, classification, points, recommendations, geminiPlan } = resultData;
+
+  const recommendationsHtml = recommendations.map(rec => `<li>${rec}</li>`).join('');
+  const geminiPlanHtml = geminiPlan ? `<hr><h3>✨ Plan de Acción con IA</h3><p>${geminiPlan.replace(/\n/g, '<br>')}</p>` : '';
+
+  return `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h1 style="color: #333;">Reporte de Salud Cardiovascular</h1>
+      <p>Hola ${nombre || 'Paciente'},</p>
+      <p>Aquí tienes un resumen de tu evaluación de riesgo cardiovascular.</p>
+      <hr>
+      <h2 style="color: #333;">Tu Resultado</h2>
+      <p style="font-size: 18px;">
+        <strong>Riesgo a 10 años:</strong> 
+        <span style="font-size: 24px; font-weight: bold; color: #d9534f;">${risk}%</span>
+      </p>
+      <p><strong>Clasificación:</strong> ${classification.level}</p>
+      <p><strong>Puntos de Riesgo:</strong> ${points}</p>
+      <hr>
+      <h3 style="color: #333;">Recomendaciones Generales</h3>
+      <ul>${recommendationsHtml}</ul>
+      ${geminiPlanHtml}
+      <hr>
+      <p style="font-size: 12px; color: #777;">
+        Recuerda: Esta herramienta es educativa y no reemplaza una consulta médica profesional.
+      </p>
+    </div>
+  `;
+}
 
 export default async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
   try {
-    // Recibe el HTML ya renderizado desde el frontend
-    const { to, subject, html } = req.body;
+    const { to, subject, resultData } = req.body;
+
+    // Construye el HTML aquí mismo en el servidor
+    const emailHtml = buildEmailHtml(resultData);
 
     const { data, error } = await resend.emails.send({
       from: 'Calculadora RCV <onboarding@resend.dev>',
       to: [to],
       subject: subject,
-      html: html, // Pasa el HTML directamente a Resend
+      html: emailHtml,
     });
 
     if (error) {

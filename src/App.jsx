@@ -1,5 +1,3 @@
-import { render } from '@react-email/render';
-import { ReporteRiesgoEmail } from './emails/ReporteRiesgoEmail';
 import React, { useState } from 'react';
 
 // --- Icon Components ---
