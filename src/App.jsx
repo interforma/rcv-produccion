@@ -1,4 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // La que ya tenías
+import { useUser } from "@clerk/clerk-react"; // Nueva
+import { db } from './firebase'; // Nueva
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"; // Nueva
+import { Link } from 'react-router-dom'; // Nueva
+
 
 // --- Icon Components ---
 const HeartIcon = ({ colorClass }) => (
@@ -90,7 +95,8 @@ const FormattedText = ({ text }) => {
 
 // --- Main App Component ---
 
-export default function App() {
+    export default function App() {
+    const { user } = useUser(); // Hook para obtener la info del usuario
     const [formData, setFormData] = useState({
         nombre: '', sexo: 'hombre', edad: 50, colesterol_total: 200, colesterol_hdl: 40,
         presion_sistolica: 120, en_tratamiento_pa: false, es_fumador: false, tiene_diabetes: false,
@@ -112,16 +118,61 @@ export default function App() {
         setFormData(prev => ({ ...prev, [name]: value === 'true' }));
     };
 
-    const handleCalculate = (e) => {
-        e.preventDefault(); setIsLoading(true); setResult(null); setEmail(''); setGeminiPlan('');
-        setTimeout(() => {
-            const points = calculatePoints(formData); const risk = getRiskFromPoints(formData.sexo, points);
-            const recommendations = generateRecommendations(formData); const classification = getRiskClassification(risk);
-            setResult({ nombre: formData.nombre, points, risk, recommendations, classification });
-            setIsLoading(false);
-        }, 500);
-    };
+// Función handleCalculate actual:
+
+const handleCalculate = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setResult(null);
+    setEmail('');
+    setGeminiPlan('');
     
+    setTimeout(() => {
+        const points = calculatePoints(formData);
+        const risk = getRiskFromPoints(formData.sexo, points);
+        const recommendations = generateRecommendations(formData);
+        const classification = getRiskClassification(risk);
+
+        // 1. Crea un objeto con todos los resultados
+        const finalResult = {
+            nombre: formData.nombre,
+            points,
+            risk,
+            recommendations,
+            classification
+        };
+
+        // 2. Actualiza el estado para mostrar los resultados en la pantalla
+        setResult(finalResult);
+        
+        // 3. Llama a la nueva función para guardar esos mismos resultados en Firebase
+        saveCalculation(finalResult); 
+
+        setIsLoading(false);
+    }, 500);
+};
+    
+// --- NEW: Firestore Integration ---
+
+    const saveCalculation = async (resultData) => {
+    if (!user) return; // No guardar si no hay usuario
+
+    try {
+        // Crea una referencia a la subcolección del usuario
+        const userCalculationsRef = collection(db, "users", user.id, "calculations");
+
+        // Añade un nuevo documento con los datos del resultado
+        await addDoc(userCalculationsRef, {
+            ...resultData,
+            createdAt: serverTimestamp() // Añade una marca de tiempo del servidor
+        });
+        console.log("Cálculo guardado exitosamente!");
+    } catch (error) {
+        console.error("Error al guardar el cálculo: ", error);
+    }
+};
+
+
     // --- NEW: Gemini API Integration ---
     const handleGeneratePlan = async () => {
         if (!result) return;
@@ -214,7 +265,13 @@ const handleSendEmail = async (e) => {
     return (
         <div className="min-h-screen bg-slate-100 font-sans p-4 sm:p-6 md:p-8">
             <main className="max-w-6xl mx-auto">
-                <header className="text-center mb-8"><h1 className="text-3xl sm:text-4xl font-bold text-slate-800">Calculadora de Riesgo Cardiovascular</h1><p className="text-slate-600 mt-2">Basada en el score de Framingham-Chile (MINSAL).</p></header>
+                <header className="text-center mb-8 relative">
+    <div className="absolute top-0 left-4 pt-4">
+        <Link to="/portal" className="text-indigo-600 font-semibold hover:underline">Mi Historial</Link>
+    </div>
+    <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">Calculadora de Riesgo Cardiovascular</h1>
+    <p className="text-slate-600 mt-2">Basada en el score de Framingham-Chile (MINSAL).</p>
+</header>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <form onSubmit={handleCalculate} className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
                         <div className="space-y-6">
