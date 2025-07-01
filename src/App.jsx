@@ -170,18 +170,15 @@ const handleSendEmail = async (e) => {
     e.preventDefault();
     if (!result || !email) return;
 
-    alert('Preparando y enviando reporte, por favor espera...');
+    alert('Iniciando envío de reporte...');
+    console.log('Paso 1: Preparando datos para enviar.');
 
     const subject = `Resultados del Cálculo de Riesgo Cardiovascular para ${result.nombre || 'el paciente'}`;
-
-    // Prepara los datos que necesita la plantilla
     const resultData = { ...result, geminiPlan };
 
-    // ¡NUEVO! Renderiza el componente de React a una cadena de HTML en el frontend
-    const emailHtml = render(<ReporteRiesgoEmail {...resultData} />);
-
     try {
-      // Llama a la función del servidor, ahora enviando el HTML ya listo
+      console.log('Paso 2: Realizando la petición fetch a /api/send-email...');
+
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
@@ -190,19 +187,24 @@ const handleSendEmail = async (e) => {
         body: JSON.stringify({
           to: email,
           subject: subject,
-          html: emailHtml, // Envía el HTML renderizado
+          resultData: resultData,
         }),
       });
+
+      console.log('Paso 3: Petición fetch completada. Estado:', response.status);
 
       const data = await response.json();
 
       if (response.ok) {
         alert('¡Resultados enviados exitosamente!');
       } else {
-        throw new Error(data.error || 'Algo salió mal en el servidor.');
+        // Si el servidor responde con un error, lo muestra
+        console.error('Error recibido del servidor:', data);
+        throw new Error(data.message || 'El servidor respondió con un error.');
       }
     } catch (error) {
-      console.error('Error al enviar el correo:', error);
+      // Si la petición fetch falla por completo (ej. problema de red), lo muestra
+      console.error('Error en el bloque catch:', error);
       alert(`Error al enviar el correo: ${error.message}`);
     }
 };
