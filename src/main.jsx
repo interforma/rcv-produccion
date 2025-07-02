@@ -1,12 +1,13 @@
-import React, { useEffect } from 'react';
+// En src/main.jsx
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
-import { ClerkProvider, SignIn, SignUp, SignedIn, SignedOut, UserButton, useAuth, useUser } from '@clerk/clerk-react';
+import { ClerkProvider, SignIn, SignUp, SignedIn, UserButton, useAuth, useUser } from '@clerk/clerk-react';
 import { BrowserRouter, Route, Routes, useNavigate, Link } from 'react-router-dom';
 import PatientPortal from './PatientPortal.jsx';
 import { Outlet } from 'react-router-dom';
-import { getAuth, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -14,10 +15,10 @@ if (!PUBLISHABLE_KEY) {
   throw new Error("Missing Publishable Key")
 }
 
-// Componente que maneja la sincronización
 const FirebaseSync = ({ children }) => {
   const { getToken } = useAuth();
   const { user } = useUser();
+  const [isFirebaseReady, setIsFirebaseReady] = useState(false);
 
   useEffect(() => {
     const signInWithFirebase = async () => {
@@ -38,6 +39,23 @@ const FirebaseSync = ({ children }) => {
     };
     signInWithFirebase();
   }, [user, getToken]);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setIsFirebaseReady(true); // Marca como listo cuando Firebase confirma el usuario
+      } else {
+        setIsFirebaseReady(false);
+      }
+    });
+    return () => unsubscribe(); // Limpia el listener
+  }, []);
+
+  // Muestra un mensaje de carga mientras se sincroniza con Firebase
+  if (!isFirebaseReady) {
+    return <div className="min-h-screen flex items-center justify-center">Sincronizando con la base de datos...</div>;
+  }
 
   return <>{children}</>;
 };
