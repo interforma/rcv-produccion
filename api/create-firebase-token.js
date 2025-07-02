@@ -6,19 +6,23 @@ if (
   !process.env.FIREBASE_PRIVATE_KEY ||
   !process.env.FIREBASE_CLIENT_EMAIL
 ) {
-  throw new Error('Firebase environment variables not set.');
+  // Este error se verá en los logs de Vercel si las claves no están configuradas
+  console.error('Error Crítico: Las variables de entorno de Firebase no están configuradas en Vercel.');
 }
 
 // Inicializa el SDK de Admin si no está ya inicializado
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      // Reemplaza los caracteres de escape \\n por saltos de línea reales
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    }),
-  });
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      }),
+    });
+  } catch (error) {
+    console.error('Error al inicializar Firebase Admin SDK:', error);
+  }
 }
 
 export default async (req, res) => {
@@ -35,7 +39,7 @@ export default async (req, res) => {
     const firebaseToken = await admin.auth().createCustomToken(userId);
     res.status(200).json({ firebaseToken });
   } catch (error) {
-    console.error('Error creating Firebase token:', error);
-    res.status(500).json({ error: 'Failed to create Firebase token' });
+    console.error('Error al crear el token de Firebase:', error);
+    res.status(500).json({ error: 'No se pudo crear el token de Firebase.' });
   }
 };
