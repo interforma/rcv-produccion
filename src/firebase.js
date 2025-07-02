@@ -1,19 +1,21 @@
 // En src/firebase.js
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // <-- IMPORTA getAuth
 
-// Tu configuración de Firebase personal
 const firebaseConfig = {
-  apiKey: "AIzaSyDOBeEkMZ8UYUKkvQWhl2NCzbzFoAH-NH4",
-  authDomain: "rcv-produccion-db.firebaseapp.com",
-  projectId: "rcv-produccion-db",
-  storageBucket: "rcv-produccion-db.appspot.com",
-  messagingSenderId: "467079642796",
-  appId: "1:467079642796:web:545481c9de17beabf8a909",
-  measurementId: "G-317W45VMHL"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Inicializa Firebase
 const app = initializeApp(firebaseConfig);
-// Exporta la instancia de Firestore para usarla en otros archivos
+
+// Crea y exporta las instancias de los servicios de Firebase
 export const db = getFirestore(app);
+export const auth = getAuth(app); // <-- CREA Y EXPORTA LA INSTANCIA DE AUTH

@@ -7,7 +7,9 @@ import { ClerkProvider, SignIn, SignUp, SignedIn, UserButton, useAuth, useUser }
 import { BrowserRouter, Route, Routes, useNavigate, Link } from 'react-router-dom';
 import PatientPortal from './PatientPortal.jsx';
 import { Outlet } from 'react-router-dom';
-import { getAuth, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+// ¡CAMBIO IMPORTANTE! Importamos nuestra instancia de auth
+import { auth } from './firebase';
+import { signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -16,13 +18,13 @@ if (!PUBLISHABLE_KEY) {
 }
 
 const FirebaseSync = ({ children }) => {
-  const { getToken } = useAuth();
   const { user } = useUser();
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
 
   useEffect(() => {
     const signInWithFirebase = async () => {
       if (user) {
+        console.log("Clerk user found. Attempting to create Firebase token.");
         try {
           const res = await fetch('/api/create-firebase-token', {
             method: 'POST',
@@ -30,29 +32,32 @@ const FirebaseSync = ({ children }) => {
             body: JSON.stringify({ userId: user.id }),
           });
           const data = await res.json();
-          const auth = getAuth();
+          console.log("Firebase token received. Attempting to sign in.");
+          // ¡CAMBIO IMPORTANTE! Usamos la instancia de auth importada
           await signInWithCustomToken(auth, data.firebaseToken);
+          console.log("Successfully signed in to Firebase.");
         } catch (error) {
           console.error('Firebase sign-in error:', error);
         }
       }
     };
     signInWithFirebase();
-  }, [user, getToken]);
+  }, [user]);
 
   useEffect(() => {
-    const auth = getAuth();
+    // ¡CAMBIO IMPORTANTE! Usamos la instancia de auth importada
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        setIsFirebaseReady(true); // Marca como listo cuando Firebase confirma el usuario
+        console.log("Firebase auth state changed: User is signed in.");
+        setIsFirebaseReady(true);
       } else {
+        console.log("Firebase auth state changed: User is signed out.");
         setIsFirebaseReady(false);
       }
     });
-    return () => unsubscribe(); // Limpia el listener
+    return () => unsubscribe();
   }, []);
 
-  // Muestra un mensaje de carga mientras se sincroniza con Firebase
   if (!isFirebaseReady) {
     return <div className="min-h-screen flex items-center justify-center">Sincronizando con la base de datos...</div>;
   }
