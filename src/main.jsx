@@ -7,8 +7,7 @@ import { ClerkProvider, SignIn, SignUp, SignedIn, UserButton, useAuth, useUser }
 import { BrowserRouter, Route, Routes, useNavigate, Link } from 'react-router-dom';
 import PatientPortal from './PatientPortal.jsx';
 import { Outlet } from 'react-router-dom';
-// ¡CAMBIO IMPORTANTE! Importamos nuestra instancia de auth
-import { auth } from './firebase';
+import { auth } from './firebase'; // Importa la instancia de auth
 import { signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -24,20 +23,28 @@ const FirebaseSync = ({ children }) => {
   useEffect(() => {
     const signInWithFirebase = async () => {
       if (user) {
-        console.log("Clerk user found. Attempting to create Firebase token.");
+        console.log("Paso 1: Usuario de Clerk detectado. Intentando crear token de Firebase.");
         try {
           const res = await fetch('/api/create-firebase-token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: user.id }),
           });
+
+          if (!res.ok) {
+              console.error("Error del servidor al crear el token:", await res.text());
+              return;
+          }
+
           const data = await res.json();
-          console.log("Firebase token received. Attempting to sign in.");
-          // ¡CAMBIO IMPORTANTE! Usamos la instancia de auth importada
+          console.log("Paso 2: Token de Firebase recibido. Intentando iniciar sesión en Firebase.");
+
           await signInWithCustomToken(auth, data.firebaseToken);
-          console.log("Successfully signed in to Firebase.");
+
+          console.log("Paso 3: signInWithCustomToken ejecutado (no significa que ya esté listo).");
+
         } catch (error) {
-          console.error('Firebase sign-in error:', error);
+          console.error('Error crítico durante el proceso de inicio de sesión en Firebase:', error);
         }
       }
     };
@@ -45,17 +52,20 @@ const FirebaseSync = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
-    // ¡CAMBIO IMPORTANTE! Usamos la instancia de auth importada
+    console.log("Adjuntando listener de estado de autenticación de Firebase...");
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        console.log("Firebase auth state changed: User is signed in.");
+        console.log("Paso 4: ¡Éxito! Listener de Firebase detectó un usuario. La aplicación está lista.");
         setIsFirebaseReady(true);
       } else {
-        console.log("Firebase auth state changed: User is signed out.");
+        console.log("Listener de Firebase detectó que no hay usuario.");
         setIsFirebaseReady(false);
       }
     });
-    return () => unsubscribe();
+    return () => {
+        console.log("Limpiando listener de Firebase.");
+        unsubscribe();
+    }
   }, []);
 
   if (!isFirebaseReady) {
